@@ -1,3 +1,5 @@
+[![license](http://img.shields.io/badge/license-boost-blue.svg)](https://github.com/nilsdeppe/tuples/blob/master/LICENSE.md)
+
 ## Description
 
 This library is designed to provide standard-library-quality
