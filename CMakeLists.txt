@@ -12,10 +12,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 enable_testing(true)
 
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(${CMAKE_SOURCE_DIR}/include)
 
 include(CodeCoverageDetection)
 include(SetupCxxVersion)
 
 include(SetupCompilationFailureTests)
 include(SetupCatchTests)
+
+add_subdirectory(test)
