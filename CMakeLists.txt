@@ -14,7 +14,8 @@ enable_testing(true)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-include(SetupCompilationFailureTests)
+include(CodeCoverageDetection)
 include(SetupCxxVersion)
 
+include(SetupCompilationFailureTests)
 include(SetupCatchTests)
