@@ -1,5 +1,6 @@
 [![license](http://img.shields.io/badge/license-boost-blue.svg)](https://github.com/nilsdeppe/tuples/blob/master/LICENSE.md)
 [![Standard](https://img.shields.io/badge/c%2B%2B-11-blue.svg)](https://en.wikipedia.org/wiki/C%2B%2B#Standardization)
+[![Build Status](https://travis-ci.org/nilsdeppe/tuples.svg?branch=master)](https://travis-ci.org/nilsdeppe/tuples)
 
 ## Description
 
