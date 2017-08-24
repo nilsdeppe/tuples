@@ -33,3 +33,7 @@
 
 # Build directories
 build*
+
+# Compilation commands and editor related files
+compile_commands.json
+.dir-locals.el
