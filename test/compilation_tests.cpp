@@ -19,8 +19,10 @@ struct no_default {
 
 #ifdef COMPILATION_TEST_DEFAULT_LVALUE
 // [[TAGS: tag1, Tag3]]
-// [[COMPILER: all REGEX: error: no matching function for call to
+// [[COMPILER: GNU REGEX: error: no matching function for call to
 // ‘tuples::tagged_tuple<tags::Int>::tagged_tuple\(\)’]]
+// [[COMPILER: Clang REGEX: error: no matching constructor for initialization of
+// 'tuples::tagged_tuple<tags::Int>'.  tuples::tagged_tuple<tags::Int> dummy;]]
 
 namespace tags {
 struct Int {
