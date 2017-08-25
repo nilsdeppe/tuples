@@ -14,6 +14,7 @@ enable_testing(true)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+include(SetupLIBCXX)
 include(CodeCoverageDetection)
 include(SetupCxxVersion)
 
