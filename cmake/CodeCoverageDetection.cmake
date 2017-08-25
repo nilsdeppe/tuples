@@ -14,22 +14,7 @@
 
 # Attempt to find tools required for code coverage analysis
 
-if( CMAKE_CXX_COMPILER_ID MATCHES "Clang" )
-  string(
-      REGEX MATCH "^[0-9]+.[0-9]+" LLVM_VERSION
-      "${CMAKE_CXX_COMPILER_VERSION}"
-  )
-  find_program(
-      LLVM_COV_BIN
-      NAMES "llvm-cov-${LLVM_VERSION}" "llvm-cov"
-      HINTS ${COMPILER_PATH}
-  )
-  configure_file(
-      "${CMAKE_SOURCE_DIR}/support/bin/llvm-gcov.sh"
-      "${CMAKE_BINARY_DIR}/llvm-gcov.sh"
-  )
-  set(GCOV "${CMAKE_BINARY_DIR}/llvm-gcov.sh")
-elseif( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" )
+if( CMAKE_CXX_COMPILER_ID STREQUAL "GNU" )
   find_program(GCOV gcov)
 endif()
 
