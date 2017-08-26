@@ -415,4 +415,48 @@ inline constexpr typename Tag::type&& get(tagged_tuple<Tags...>&& t) noexcept {
   return static_cast<typename Tag::type&&>(
       static_cast<tuples_detail::tagged_tuple_leaf<Tag>&&>(t).get());
 }
+
+// C++17 Draft 23.5.3.8 Relational operators
+namespace tuples_detail {
+struct equal {
+  template <class T, class U>
+  static TUPLES_LIB_CONSTEXPR_CXX_14 void apply(
+      T const& lhs, U const& rhs, bool& result) noexcept(noexcept(lhs == rhs)) {
+    result = result and lhs == rhs;
+  }
+};
+
+template <class... LTags, class... RTags>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool tuple_equal_impl(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(std::initializer_list<bool>{
+    (get<LTags>(lhs) == get<RTags>(rhs))...})) {
+  bool equal = true;
+  // This short circuits in the sense that the operator== is only evaluated if
+  // the result thus far is true
+  static_cast<void>(std::initializer_list<char>{
+      (equal::apply(get<LTags>(lhs), get<RTags>(rhs), equal), '0')...});
+  return equal;
+}
+}  // namespace tuples_detail
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator==(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(tuples_detail::tuple_equal_impl(lhs, rhs))) {
+  return tuples_detail::tuple_equal_impl(lhs, rhs);
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator!=(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(lhs == rhs)) {
+  return not(lhs == rhs);
+}
 }  // namespace tuples

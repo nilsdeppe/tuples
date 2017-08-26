@@ -14,7 +14,10 @@ struct TD;
 
 #include "tuples/tagged_tuple.hpp"
 
+namespace {
+
 static int global_of_no_default = 0;
+static int global_time_mock = 0;
 
 struct empty_base {};
 bool operator==(const empty_base&, const empty_base&) noexcept { return true; }
@@ -131,6 +134,199 @@ TEST_CASE("Unit.tagged_tuple.Ebo", "[Unit][Runtime][tagged_tuple]") {
   check_get<tags::empty_base>(t2);
 }
 
+struct NotNoExceptCompare {
+  explicit NotNoExceptCompare(int v) : v_(v) {}
+
+  int v_{0};
+};
+bool operator==(NotNoExceptCompare const& lhs,
+                NotNoExceptCompare const& rhs) noexcept(false) {
+  return lhs.v_ == rhs.v_;
+}
+bool operator!=(NotNoExceptCompare const& lhs,
+                NotNoExceptCompare const& rhs) noexcept(noexcept(lhs == rhs)) {
+  return not(lhs == rhs);
+}
+
+struct timed_compare {
+  explicit timed_compare(int v) : v_(v) {}
+  int v_{0};
+};
+bool operator==(timed_compare const& lhs, timed_compare const& rhs) noexcept {
+  global_time_mock++;
+  return lhs.v_ == rhs.v_;
+}
+
+namespace relational_tags {
+struct Int0 {
+  using type = int;
+};
+struct Int1 {
+  using type = int;
+};
+struct Int2 {
+  using type = int;
+};
+
+struct NotNoExceptCompare {
+  using type = ::NotNoExceptCompare;
+};
+
+struct TimedCompare0 {
+  using type = ::timed_compare;
+};
+struct TimedCompare1 {
+  using type = ::timed_compare;
+};
+struct TimedCompare2 {
+  using type = ::timed_compare;
+};
+struct TimedCompare3 {
+  using type = ::timed_compare;
+};
+struct TimedCompare4 {
+  using type = ::timed_compare;
+};
+struct TimedCompare5 {
+  using type = ::timed_compare;
+};
+struct TimedCompare6 {
+  using type = ::timed_compare;
+};
+struct TimedCompare7 {
+  using type = ::timed_compare;
+};
+struct TimedCompare8 {
+  using type = ::timed_compare;
+};
+struct TimedCompare9 {
+  using type = ::timed_compare;
+};
+struct TimedCompare10 {
+  using type = ::timed_compare;
+};
+struct TimedCompare11 {
+  using type = ::timed_compare;
+};
+struct TimedCompare12 {
+  using type = ::timed_compare;
+};
+struct TimedCompare13 {
+  using type = ::timed_compare;
+};
+}  // namespace relational_tags
+
+TEST_CASE("Unit.tagged_tuple.relational", "[unit][runtime][tagged_tuple]") {
+  {
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t0{1, 4, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t1{1, 4, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t2{1, 3, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t3{2, 4, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t4{1, 4, 6};
+    CHECK(t0 == t1);
+    CHECK(t0 == t0);
+    CHECK_FALSE(t0 != t1);
+    CHECK_FALSE(t0 == t2);
+    CHECK(t0 != t2);
+    CHECK_FALSE(t0 == t3);
+    CHECK(t0 != t3);
+    CHECK_FALSE(t0 == t4);
+    CHECK(t0 != t4);
+    // Check that short circuiting in comparisons works correctly
+    tuples::tagged_tuple<
+        relational_tags::TimedCompare0, relational_tags::TimedCompare1,
+        relational_tags::TimedCompare2, relational_tags::TimedCompare3,
+        relational_tags::TimedCompare4, relational_tags::TimedCompare5,
+        relational_tags::TimedCompare6, relational_tags::TimedCompare7,
+        relational_tags::TimedCompare8, relational_tags::TimedCompare9,
+        relational_tags::TimedCompare10, relational_tags::TimedCompare11,
+        relational_tags::TimedCompare12, relational_tags::TimedCompare13>
+        t5{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+    tuples::tagged_tuple<
+        relational_tags::TimedCompare0, relational_tags::TimedCompare1,
+        relational_tags::TimedCompare2, relational_tags::TimedCompare3,
+        relational_tags::TimedCompare4, relational_tags::TimedCompare5,
+        relational_tags::TimedCompare6, relational_tags::TimedCompare7,
+        relational_tags::TimedCompare8, relational_tags::TimedCompare9,
+        relational_tags::TimedCompare10, relational_tags::TimedCompare11,
+        relational_tags::TimedCompare12, relational_tags::TimedCompare13>
+        t6{1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+    global_time_mock = 0;
+    CHECK_FALSE(t5 == t6);
+    CHECK(global_time_mock == 1);
+
+    global_time_mock = 0;
+    CHECK(t5 != t6);
+    CHECK(global_time_mock == 1);
+
+    tuples::tagged_tuple<
+        relational_tags::TimedCompare0, relational_tags::TimedCompare1,
+        relational_tags::TimedCompare2, relational_tags::TimedCompare3,
+        relational_tags::TimedCompare4, relational_tags::TimedCompare5,
+        relational_tags::TimedCompare6, relational_tags::TimedCompare7,
+        relational_tags::TimedCompare8, relational_tags::TimedCompare9,
+        relational_tags::TimedCompare10, relational_tags::TimedCompare11,
+        relational_tags::TimedCompare12, relational_tags::TimedCompare13>
+        t7{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14};
+    global_time_mock = 0;
+    CHECK_FALSE(t5 == t7);
+    CHECK(global_time_mock == 14);
+
+    global_time_mock = 0;
+    CHECK(t5 != t7);
+    CHECK(global_time_mock == 14);
+  }
+  static_assert(not noexcept(NotNoExceptCompare{1} == NotNoExceptCompare{1}),
+                "Failed testing Unit.tagged_tuple.relational");
+  static_assert(not noexcept(NotNoExceptCompare{1} != NotNoExceptCompare{0}),
+                "Failed testing Unit.tagged_tuple.relational");
+  CHECK(NotNoExceptCompare{1} == NotNoExceptCompare{1});
+  CHECK_FALSE(NotNoExceptCompare{1} == NotNoExceptCompare{0});
+  CHECK(NotNoExceptCompare{1} != NotNoExceptCompare{0});
+  CHECK_FALSE(NotNoExceptCompare{1} != NotNoExceptCompare{1});
+
+#if __cplusplus >= 201402L
+  {
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t0{1, 4, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t1{1, 4, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t2{1, 3, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t3{2, 4, 5};
+    constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
+                                   relational_tags::Int2>
+        t4{1, 4, 6};
+    static_assert(t0 == t1, "Failed testing Unit.tagged_tuple.relational");
+    static_assert(not(t0 == t2), "Failed testing Unit.tagged_tuple.relational");
+    static_assert(not(t0 == t3), "Failed testing Unit.tagged_tuple.relational");
+    static_assert(not(t0 == t4), "Failed testing Unit.tagged_tuple.relational");
+    static_assert(t0 != t2, "Failed testing Unit.tagged_tuple.relational");
+    static_assert(t0 != t3, "Failed testing Unit.tagged_tuple.relational");
+    static_assert(t0 != t4, "Failed testing Unit.tagged_tuple.relational");
+    static_assert(noexcept(t0 != t4),
+                  "Failed testing Unit.tagged_tuple.relational");
+    static_assert(noexcept(t0 == t2),
+                  "Failed testing Unit.tagged_tuple.relational");
+  }
+#endif
+}
+
 TEST_CASE("Unit.tagged_tuple.helper_classes", "[unit][runtime][tagged_tuple]") {
   static_assert(
       tuples::tuple_size<
@@ -156,3 +352,4 @@ TEST_CASE("Unit.tagged_tuple.helper_classes", "[unit][runtime][tagged_tuple]") {
       tuples::tuple_size<const volatile tuples::tagged_tuple<>>::value == 0,
       "Failed check tuple_size");
 }
+}  // namespace
