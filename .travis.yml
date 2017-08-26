@@ -3,16 +3,6 @@ language: cpp
 
 matrix:
   include:
-    # GCC 4.7
-    - os: linux
-      compiler: gcc
-      dist: trusty
-      addons:
-        apt:
-          sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.7']
-      env: TOOLSET=g++-4.7 CXX_VERSION=11
-
     # GCC 4.8
     - os: linux
       compiler: gcc
