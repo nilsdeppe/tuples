@@ -130,3 +130,29 @@ TEST_CASE("Unit.tagged_tuple.Ebo", "[Unit][Runtime][tagged_tuple]") {
   auto t2 = test_impl<tuples::tagged_tuple<tags::empty_base>>();
   check_get<tags::empty_base>(t2);
 }
+
+TEST_CASE("Unit.tagged_tuple.helper_classes", "[unit][runtime][tagged_tuple]") {
+  static_assert(
+      tuples::tuple_size<
+          tuples::tagged_tuple<tags::no_default, tags::empty_base>>::value == 2,
+      "Failed check tuple_size");
+  static_assert(tuples::tuple_size<const tuples::tagged_tuple<
+                        tags::no_default, tags::empty_base>>::value == 2,
+                "Failed check tuple_size");
+  static_assert(tuples::tuple_size<volatile tuples::tagged_tuple<
+                        tags::no_default, tags::empty_base>>::value == 2,
+                "Failed check tuple_size");
+  static_assert(tuples::tuple_size<const volatile tuples::tagged_tuple<
+                        tags::no_default, tags::empty_base>>::value == 2,
+                "Failed check tuple_size");
+
+  static_assert(tuples::tuple_size<tuples::tagged_tuple<>>::value == 0,
+                "Failed check tuple_size");
+  static_assert(tuples::tuple_size<const tuples::tagged_tuple<>>::value == 0,
+                "Failed check tuple_size");
+  static_assert(tuples::tuple_size<volatile tuples::tagged_tuple<>>::value == 0,
+                "Failed check tuple_size");
+  static_assert(
+      tuples::tuple_size<const volatile tuples::tagged_tuple<>>::value == 0,
+      "Failed check tuple_size");
+}

@@ -370,7 +370,24 @@ class tagged_tuple<> {
   void swap(tagged_tuple& /*unused*/) noexcept {}
 };
 
-// get implementations
+// C++17 Draft 23.5.3.6 Tuple helper classes
+template <class T>
+struct tuple_size;
+
+template <class... Tags>
+struct tuple_size<tagged_tuple<Tags...>>
+    : std::integral_constant<size_t, sizeof...(Tags)> {};
+template <class... Tags>
+struct tuple_size<const tagged_tuple<Tags...>>
+    : tuple_size<tagged_tuple<Tags...>> {};
+template <class... Tags>
+struct tuple_size<volatile tagged_tuple<Tags...>>
+    : tuple_size<tagged_tuple<Tags...>> {};
+template <class... Tags>
+struct tuple_size<const volatile tagged_tuple<Tags...>>
+    : tuple_size<tagged_tuple<Tags...>> {};
+
+// C++17 Draft 23.5.3.7 Element access
 template <class Tag, class... Tags>
 inline constexpr const typename Tag::type& get(
     const tagged_tuple<Tags...>& t) noexcept {
