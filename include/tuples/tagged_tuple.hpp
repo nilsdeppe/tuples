@@ -160,11 +160,14 @@ constexpr const typename Tag::type&& get(
 template <class Tag, class... Tags>
 constexpr typename Tag::type&& get(tagged_tuple<Tags...>&& t) noexcept;
 
+/*!
+ * \brief Returns the type of the Tag
+ */
+template <class Tag>
+using tag_type = typename Tag::type;
+
 template <class... Tags>
 class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
-  template <class Tag>
-  using tag_type = typename Tag::type;
-
   template <class... Args>
   struct pack_is_tagged_tuple : std::false_type {};
   template <class Arg>
