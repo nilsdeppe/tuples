@@ -19,6 +19,20 @@ namespace tuples {
 
 namespace tuples_detail {
 
+template <class T>
+inline constexpr T&& forward(
+    typename std::remove_reference<T>::type& t) noexcept {
+  return static_cast<T&&>(t);
+}
+
+template <class T>
+inline constexpr T&& forward(
+    typename std::remove_reference<T>::type&& t) noexcept {
+  static_assert(!std::is_lvalue_reference<T>::value,
+                "cannot forward an rvalue as an lvalue");
+  return static_cast<T&&>(t);
+}
+
 template <class T, T...>
 struct value_list {};
 
@@ -89,7 +103,7 @@ class tagged_tuple_leaf {
                 std::is_constructible<value_type, T&&>::value>::type* = nullptr>
   constexpr explicit tagged_tuple_leaf(T&& t) noexcept(
       std::is_nothrow_constructible<value_type, T&&>::value)
-      : value_(std::forward<T>(t)) {
+      : value_(tuples_detail::forward<T>(t)) {
     static_assert(can_bind_reference<T>(),
                   "Cannot construct an lvalue reference with an rvalue");
   }
@@ -121,7 +135,7 @@ class tagged_tuple_leaf<Tag, true> : private Tag::type {
                 std::is_constructible<value_type, T&&>::value>::type* = nullptr>
   constexpr explicit tagged_tuple_leaf(T&& t) noexcept(
       std::is_nothrow_constructible<value_type, T&&>::value)
-      : value_type(std::forward<T>(t)) {}
+      : value_type(tuples_detail::forward<T>(t)) {}
 
   constexpr tagged_tuple_leaf(tagged_tuple_leaf const& /*rhs*/) = default;
   constexpr tagged_tuple_leaf(tagged_tuple_leaf&& /*rhs*/) = default;
@@ -299,7 +313,8 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   constexpr explicit tagged_tuple(Us&&... us) noexcept(
       tuples_detail::all<std::is_nothrow_constructible<
           tuples_detail::tagged_tuple_leaf<Tags>, Us&&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(std::forward<Us>(us))... {}
+      : tuples_detail::tagged_tuple_leaf<Tags>(
+            tuples_detail::forward<Us>(us))... {}
 
   template <class... Us,
             typename std::enable_if<
@@ -309,7 +324,8 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   constexpr tagged_tuple(Us&&... us) noexcept(
       tuples_detail::all<std::is_nothrow_constructible<
           tuples_detail::tagged_tuple_leaf<Tags>, Us&&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(std::forward<Us>(us))... {}
+      : tuples_detail::tagged_tuple_leaf<Tags>(
+            tuples_detail::forward<Us>(us))... {}
 
   template <
       class... UTags,
@@ -352,7 +368,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
       tuples_detail::all<std::is_nothrow_constructible<
           tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
       : tuples_detail::tagged_tuple_leaf<Tags>(
-            std::forward<tag_type<UTags>>(get<Tags>(t)))... {}
+            tuples_detail::forward<tag_type<UTags>>(get<Tags>(t)))... {}
 
   template <
       class... UTags,
@@ -367,7 +383,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
       tuples_detail::all<std::is_nothrow_constructible<
           tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
       : tuples_detail::tagged_tuple_leaf<Tags>(
-            std::forward<tag_type<UTags>>(get<Tags>(t)))... {}
+            tuples_detail::forward<tag_type<UTags>>(get<Tags>(t)))... {}
 };
 
 template <>
