@@ -17,6 +17,7 @@ and tagged tuples with millions of elements are supported.
 - Clang 3.5 or newer tested (3.1 and newer should work)
 - Intel C++ compiler 14 or newer
 - MSVC currently unknown
+- XCode v6.4 and newer tested
 
 ## Acknowledgements
 

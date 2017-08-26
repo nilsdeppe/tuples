@@ -193,6 +193,17 @@ matrix:
           packages: ['clang-5.0', 'libc++-dev']
       env: TOOLSET=clang++-5.0 CXX_VERSION=14
 
+    # Xcode 6.4
+    - os: osx
+      compiler: clang
+      osx_image: xcode6.4
+      env: TOOLSET=clang++ CXX_VERSION=11
+
+    - os: osx
+      compiler: clang
+      osx_image: xcode6.4
+      env: TOOLSET=clang++ CXX_VERSION=14
+
     # Xcode 7.3
     - os: osx
       compiler: clang
@@ -202,6 +213,17 @@ matrix:
     - os: osx
       compiler: clang
       osx_image: xcode7.3
+      env: TOOLSET=clang++ CXX_VERSION=14
+
+    # Xcode 8.3
+    - os: osx
+      compiler: clang
+      osx_image: xcode8.3
+      env: TOOLSET=clang++ CXX_VERSION=11
+
+    - os: osx
+      compiler: clang
+      osx_image: xcode8.3
       env: TOOLSET=clang++ CXX_VERSION=14
 
 # Install Catch
