@@ -22,10 +22,27 @@ namespace tuples_detail {
 template <class T, T...>
 struct value_list {};
 
+template <class...>
+struct typelist {};
+
 template <bool... Bs>
-struct all
-    : std::is_same<value_list<bool, Bs...>,
-                   value_list<bool, (static_cast<void>(Bs), true)...>>::type {};
+using all = typename std::is_same<
+    value_list<bool, Bs...>,
+    value_list<bool, (static_cast<void>(Bs), true)...>>::type;
+
+struct no_such_type {
+  no_such_type() = delete;
+  no_such_type(no_such_type const& /*unused*/) = delete;
+  no_such_type(no_such_type&& /*unused*/) = delete;
+  ~no_such_type() = delete;
+  no_such_type& operator=(no_such_type const& /*unused*/) = delete;
+  no_such_type operator=(no_such_type&& /*unused*/) = delete;
+};
+
+template <typename... Ts>
+constexpr char swallow(Ts&&...) noexcept {
+  return '0';
+}
 }  // namespace tuples_detail
 
 namespace tuples_detail {
