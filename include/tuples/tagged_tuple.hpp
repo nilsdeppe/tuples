@@ -10,6 +10,13 @@
 #include <utility>
 
 namespace tuples {
+
+#if __cplusplus >= 201402L
+#define TUPLES_LIB_CONSTEXPR_CXX_14 constexpr
+#else
+#define TUPLES_LIB_CONSTEXPR_CXX_14
+#endif
+
 namespace tuples_detail {
 
 template <class T, T...>
@@ -73,7 +80,7 @@ class tagged_tuple_leaf {
   constexpr tagged_tuple_leaf(const tagged_tuple_leaf& /*rhs*/) = default;
   constexpr tagged_tuple_leaf(tagged_tuple_leaf&& /*rhs*/) = default;
 
-#if __cplusplus <= 201402L
+#if __cplusplus < 201402L
   value_type& get() noexcept { return value_; }
 #else
   constexpr value_type& get() noexcept { return value_; }
@@ -102,10 +109,12 @@ class tagged_tuple_leaf<Tag, true> : private Tag::type {
   constexpr tagged_tuple_leaf(const tagged_tuple_leaf& /*rhs*/) = default;
   constexpr tagged_tuple_leaf(tagged_tuple_leaf&& /*rhs*/) = default;
 
-#if __cplusplus <= 201402L
+#if __cplusplus < 201402L
   value_type& get() noexcept { return static_cast<value_type&>(*this); }
 #else
-  constexpr value_type& get() noexcept { return value_; }
+  constexpr value_type& get() noexcept {
+    return static_cast<value_type&>(*this);
+  }
 #endif
 
   constexpr const value_type& get() const noexcept {
