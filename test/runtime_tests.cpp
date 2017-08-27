@@ -200,6 +200,49 @@ TEST_CASE("Unit.tagged_tuple.construction", "[unit][runtime][tagged_tuple]") {
   }
 }
 
+// C++17 Draft 23.5.3.2 Assignment
+TEST_CASE("Unit.tagged_tuple.assignment", "[unit][tagged_tuple][runtime]") {
+  {
+    // Assignment from same type of tagged_tuple
+    tuples::tagged_tuple<tags::Int, tags::Short0> t0{2, 9};
+    CHECK(tuples::get<tags::Int>(t0) == 2);
+    CHECK(tuples::get<tags::Short0>(t0) == 9);
+    tuples::tagged_tuple<tags::Int, tags::Short0> t1{3, 4};
+    CHECK(tuples::get<tags::Int>(t1) == 3);
+    CHECK(tuples::get<tags::Short0>(t1) == 4);
+    t1 = t0;
+    CHECK(tuples::get<tags::Int>(t1) == 2);
+    CHECK(tuples::get<tags::Short0>(t1) == 9);
+    tuples::tagged_tuple<tags::Int, tags::Short0> t2{3, 4};
+    CHECK(tuples::get<tags::Int>(t2) == 3);
+    CHECK(tuples::get<tags::Short0>(t2) == 4);
+    t2 = std::move(t0);
+    CHECK(tuples::get<tags::Int>(t2) == 2);
+    CHECK(tuples::get<tags::Short0>(t2) == 9);
+    tuples::tagged_tuple<> t3{};
+    tuples::tagged_tuple<> t4{};
+    t3 = t4;
+  }
+  {
+    // Assignment from different type of tagged_tuple
+    tuples::tagged_tuple<tags::Int, tags::Short0> t0{2, 9};
+    CHECK(tuples::get<tags::Int>(t0) == 2);
+    CHECK(tuples::get<tags::Short0>(t0) == 9);
+    tuples::tagged_tuple<tags::Int2, tags::Int1> t1(3, 4);
+    CHECK(tuples::get<tags::Int2>(t1) == 3);
+    CHECK(tuples::get<tags::Int1>(t1) == 4);
+    t1 = t0;
+    CHECK(tuples::get<tags::Int2>(t1) == 2);
+    CHECK(tuples::get<tags::Int1>(t1) == 9);
+    tuples::tagged_tuple<tags::Int2, tags::Int1> t2(3, 4);
+    CHECK(tuples::get<tags::Int2>(t2) == 3);
+    CHECK(tuples::get<tags::Int1>(t2) == 4);
+    t2 = std::move(t0);
+    CHECK(tuples::get<tags::Int2>(t2) == 2);
+    CHECK(tuples::get<tags::Int1>(t2) == 9);
+  }
+}
+
 // C++17 Draft 23.5.3.8 Relational operators
 struct NotNoExceptCompare {
   explicit NotNoExceptCompare(int v) : v_(v) {}

@@ -263,6 +263,16 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
     }
   };
 
+  // C++17 Draft 23.5.3.2 Assignment - helper aliases
+  using is_copy_assignable =
+      tuples_detail::all<std::is_copy_assignable<tag_type<Tags>>::value...>;
+  using is_nothrow_copy_assignable = tuples_detail::all<
+      std::is_nothrow_copy_assignable<tag_type<Tags>>::value...>;
+  using is_move_assignable =
+      tuples_detail::all<std::is_move_assignable<tag_type<Tags>>::value...>;
+  using is_nothrow_move_assignable = tuples_detail::all<
+      std::is_nothrow_move_assignable<tag_type<Tags>>::value...>;
+
   template <class Tag, class... LTags>
   friend constexpr const typename Tag::type& get(
       const tagged_tuple<LTags...>& t) noexcept;
@@ -384,6 +394,56 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
           tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
       : tuples_detail::tagged_tuple_leaf<Tags>(
             tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))... {}
+
+  // C++17 Draft 23.5.3.2 Assignment
+  tagged_tuple& operator=(
+      typename std::conditional<is_copy_assignable::value, tagged_tuple,
+                                tuples_detail::no_such_type>::type const&
+          t) noexcept(is_nothrow_copy_assignable::value) {
+    static_cast<void>(
+        tuples_detail::swallow((get<Tags>(*this) = get<Tags>(t))...));
+    return *this;
+  }
+
+  tagged_tuple& operator=(
+      typename std::conditional<is_move_assignable::value, tagged_tuple,
+                                tuples_detail::no_such_type>::type&&
+          t) noexcept(is_nothrow_move_assignable::value) {
+    static_cast<void>(tuples_detail::swallow(
+        (get<Tags>(*this) =
+             tuples_detail::forward<tag_type<Tags>>(get<Tags>(t)))...));
+    return *this;
+  }
+
+  template <class... UTags,
+            typename std::enable_if<
+                sizeof...(Tags) == sizeof...(UTags) and
+                tuples_detail::all<std::is_assignable<
+                    tag_type<Tags>&,
+                    tag_type<UTags> const&>::value...>::value>::type* = nullptr>
+  tagged_tuple& operator=(tagged_tuple<UTags...> const& t) noexcept(
+      tuples_detail::all<std::is_nothrow_assignable<
+          tag_type<Tags>&, tag_type<UTags> const&>::value...>::value) {
+    static_cast<void>(
+        tuples_detail::swallow((get<Tags>(*this) = get<UTags>(t))...));
+    return *this;
+  }
+
+  template <
+      class... UTags,
+      typename std::enable_if<
+          sizeof...(Tags) == sizeof...(UTags) and
+          tuples_detail::all<std::is_assignable<
+              tag_type<Tags>&, tag_type<UTags>&&>::value...>::value>::type* =
+          nullptr>
+  tagged_tuple& operator=(tagged_tuple<UTags...>&& t) noexcept(
+      tuples_detail::all<std::is_nothrow_assignable<
+          tag_type<Tags>&, tag_type<UTags>&&>::value...>::value) {
+    static_cast<void>(tuples_detail::swallow(
+        (get<Tags>(*this) =
+             tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))...));
+    return *this;
+  }
 };
 
 template <>
