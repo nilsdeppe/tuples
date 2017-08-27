@@ -50,7 +50,7 @@ function(compilation_tests_parse_file SOURCE_FILE TEST_TARGET)
       FILE(READ "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}" OUTPUT_REGEX)
       FILE(REMOVE "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}")
 
-      string(REGEX REPLACE "Tags: ([a-z0-9 ]+) (.*)" "\\1"
+      string(REGEX REPLACE "Tags: ([a-z0-9_ ]+) (.*)" "\\1"
         TEST_TAGS "${OUTPUT_REGEX}")
 
       string(REGEX REPLACE "Tags: ${TEST_TAGS} ([0-9]+.[0-9]+): (.*)" "\\1"
