@@ -44,8 +44,15 @@ namespace tags {
 struct Int {
   using type = int;
 };
+struct Int1 {
+  using type = int;
+};
 struct Int2 {
   using type = int;
+};
+
+struct Short0 {
+  using type = short;
 };
 }  // namespace tags
 
@@ -134,6 +141,66 @@ TEST_CASE("Unit.tagged_tuple.Ebo", "[Unit][Runtime][tagged_tuple]") {
   check_get<tags::empty_base>(t2);
 }
 
+// C++17 Draft 23.5.3.1 Construction
+struct non_copyable {
+  explicit non_copyable() = default;
+  explicit non_copyable(non_copyable const&) = default;
+  non_copyable& operator=(non_copyable const&) = delete;
+  explicit non_copyable(non_copyable&&) = default;
+  non_copyable& operator=(non_copyable&&) = default;
+};
+
+namespace tags {
+struct non_copyable {
+  using type = ::non_copyable;
+};
+}
+
+TEST_CASE("Unit.tagged_tuple.construction", "[unit][runtime][tagged_tuple]") {
+  {
+    // Test copy and move constructors
+    tuples::tagged_tuple<tags::Int, tags::Short0> t0{2, 9};
+    CHECK(tuples::get<tags::Int>(t0) == 2);
+    CHECK(tuples::get<tags::Short0>(t0) == 9);
+    tuples::tagged_tuple<tags::Int, tags::Short0> t1(t0);
+    CHECK(tuples::get<tags::Int>(t1) == 2);
+    CHECK(tuples::get<tags::Short0>(t1) == 9);
+    CHECK(t1 == t0);
+    tuples::tagged_tuple<tags::Int, tags::Short0> t2(std::move(t0));
+    CHECK(tuples::get<tags::Int>(t2) == 2);
+    CHECK(tuples::get<tags::Short0>(t2) == 9);
+    CHECK(t2 == t0);
+  }
+  {
+    // Construct one tuple from another where the types are convertible
+    // implicit conversion constructors
+    tuples::tagged_tuple<tags::Int, tags::Short0> t0{2, 9};
+    CHECK(tuples::get<tags::Int>(t0) == 2);
+    CHECK(tuples::get<tags::Short0>(t0) == 9);
+    tuples::tagged_tuple<tags::Int2, tags::Int1> t1(t0);
+    CHECK(tuples::get<tags::Int2>(t1) == 2);
+    CHECK(tuples::get<tags::Int1>(t1) == 9);
+    CHECK(tuples::get<tags::Int>(t0) == 2);
+    CHECK(tuples::get<tags::Short0>(t0) == 9);
+    tuples::tagged_tuple<tags::Int2, tags::Int1> t2(std::move(t0));
+    CHECK(tuples::get<tags::Int2>(t2) == 2);
+    CHECK(tuples::get<tags::Int1>(t2) == 9);
+    // explicit constructors
+    tuples::tagged_tuple<tags::non_copyable, tags::Int, tags::Short0> t3{
+        non_copyable{}, 2, 9};
+    CHECK(tuples::get<tags::Int>(t3) == 2);
+    CHECK(tuples::get<tags::Short0>(t3) == 9);
+    tuples::tagged_tuple<tags::non_copyable, tags::Int, tags::Int1> t4{t3};
+    CHECK(tuples::get<tags::Int>(t4) == 2);
+    CHECK(tuples::get<tags::Int1>(t4) == 9);
+    tuples::tagged_tuple<tags::non_copyable, tags::Int, tags::Int1> t5{
+        std::move(t3)};
+    CHECK(tuples::get<tags::Int>(t5) == 2);
+    CHECK(tuples::get<tags::Int1>(t5) == 9);
+  }
+}
+
+// C++17 Draft 23.5.3.8 Relational operators
 struct NotNoExceptCompare {
   explicit NotNoExceptCompare(int v) : v_(v) {}
 

@@ -339,7 +339,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   constexpr explicit tagged_tuple(tagged_tuple<UTags...> const& t) noexcept(
       tuples_detail::all<std::is_nothrow_constructible<
           tag_type<Tags>, tag_type<UTags> const&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(get<Tags>(t))... {}
+      : tuples_detail::tagged_tuple_leaf<Tags>(get<UTags>(t))... {}
 
   template <
       class... UTags,
@@ -353,7 +353,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   constexpr tagged_tuple(tagged_tuple<UTags...> const& t) noexcept(
       tuples_detail::all<std::is_nothrow_constructible<
           tag_type<Tags>, tag_type<UTags> const&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(get<Tags>(t))... {}
+      : tuples_detail::tagged_tuple_leaf<Tags>(get<UTags>(t))... {}
 
   template <
       class... UTags,
@@ -368,7 +368,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
       tuples_detail::all<std::is_nothrow_constructible<
           tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
       : tuples_detail::tagged_tuple_leaf<Tags>(
-            tuples_detail::forward<tag_type<UTags>>(get<Tags>(t)))... {}
+            tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))... {}
 
   template <
       class... UTags,
@@ -383,7 +383,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
       tuples_detail::all<std::is_nothrow_constructible<
           tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
       : tuples_detail::tagged_tuple_leaf<Tags>(
-            tuples_detail::forward<tag_type<UTags>>(get<Tags>(t)))... {}
+            tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))... {}
 };
 
 template <>
