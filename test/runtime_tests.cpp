@@ -65,8 +65,8 @@ Tuple test_impl(Value&&... value) {
 
 template <class Tag, class Tuple, class... Values>
 void check_get(Tuple& t, Values&&... values) {
-  CHECK(tuples::get<Tag>(static_cast<Tuple&>(t)) ==
-        typename Tag::type{values...});
+  CHECK((tuples::get<Tag>(static_cast<Tuple&>(t)) ==
+         typename Tag::type{values...}));
   CHECK(tuples::get<Tag>(static_cast<const Tuple&>(t)) ==
         typename Tag::type{values...});
   CHECK(tuples::get<Tag>(static_cast<Tuple&&>(t)) ==
@@ -326,7 +326,7 @@ struct TimedCompare13 {
 };
 }  // namespace relational_tags
 
-TEST_CASE("Unit.tagged_tuple.relational", "[unit][runtime][tagged_tuple]") {
+TEST_CASE("Unit.tagged_tuple.equivalence", "[unit][runtime][tagged_tuple]") {
   {
     constexpr tuples::tagged_tuple<relational_tags::Int0, relational_tags::Int1,
                                    relational_tags::Int2>
@@ -433,6 +433,164 @@ TEST_CASE("Unit.tagged_tuple.relational", "[unit][runtime][tagged_tuple]") {
                   "Failed testing Unit.tagged_tuple.relational");
     static_assert(noexcept(t0 == t2),
                   "Failed testing Unit.tagged_tuple.relational");
+  }
+#endif
+}
+
+struct lex_time_compared {
+  lex_time_compared(char c) : c_(c) {}
+  char c_;
+};
+
+bool operator<(lex_time_compared const& lhs,
+                         lex_time_compared const& rhs) noexcept {
+  global_time_mock++;
+  return lhs.c_ < rhs.c_;
+}
+
+namespace relational_tags {
+struct Char0 {
+  using type = char;
+};
+struct Char1 {
+  using type = char;
+};
+struct Char2 {
+  using type = char;
+};
+
+struct LexTimeComp0 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp1 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp2 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp3 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp4 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp5 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp6 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp7 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp8 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp9 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp10 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp11 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp12 {
+  using type = lex_time_compared;
+};
+struct LexTimeComp13 {
+  using type = lex_time_compared;
+};
+}  // namespace relational_tags
+
+TEST_CASE("Unit.tagged_tuple.relational", "[unit][runtime][tagged_tuple]") {
+  {
+    // Check lexicographical comparison
+    tuples::tagged_tuple<relational_tags::Char0, relational_tags::Char1,
+                         relational_tags::Char2>
+        t0{'a', 'a', 'c'};
+    tuples::tagged_tuple<relational_tags::Char0, relational_tags::Char1,
+                         relational_tags::Char2>
+        t1{'a', 'a', 'd'};
+    tuples::tagged_tuple<relational_tags::Char0, relational_tags::Char1,
+                         relational_tags::Char2>
+        t2{'a', 'a', 'c'};
+    tuples::tagged_tuple<relational_tags::Char0, relational_tags::Char1,
+                         relational_tags::Char2>
+        t3{'a', 'a', 'b'};
+    CHECK(t0 < t1);
+    CHECK(t0 <= t1);
+    CHECK(t0 <= t2);
+
+    CHECK(t0 > t3);
+    CHECK(t0 >= t2);
+    CHECK(t0 >= t3);
+  }
+  {
+    // Check short circuiting works correctly
+    tuples::tagged_tuple<
+        relational_tags::LexTimeComp0, relational_tags::LexTimeComp1,
+        relational_tags::LexTimeComp2, relational_tags::LexTimeComp3,
+        relational_tags::LexTimeComp4, relational_tags::LexTimeComp5,
+        relational_tags::LexTimeComp6, relational_tags::LexTimeComp7,
+        relational_tags::LexTimeComp8, relational_tags::LexTimeComp9,
+        relational_tags::LexTimeComp10, relational_tags::LexTimeComp11,
+        relational_tags::LexTimeComp12, relational_tags::LexTimeComp13>
+        t0{'a', 'a', 'a', 'a', 'a', 'a', 'a',
+           'a', 'a', 'a', 'a', 'a', 'a', 'a'};
+    tuples::tagged_tuple<
+        relational_tags::LexTimeComp0, relational_tags::LexTimeComp1,
+        relational_tags::LexTimeComp2, relational_tags::LexTimeComp3,
+        relational_tags::LexTimeComp4, relational_tags::LexTimeComp5,
+        relational_tags::LexTimeComp6, relational_tags::LexTimeComp7,
+        relational_tags::LexTimeComp8, relational_tags::LexTimeComp9,
+        relational_tags::LexTimeComp10, relational_tags::LexTimeComp11,
+        relational_tags::LexTimeComp12, relational_tags::LexTimeComp13>
+        t1{'b', 'a', 'a', 'a', 'a', 'a', 'a',
+           'a', 'a', 'a', 'a', 'a', 'a', 'a'};
+    global_time_mock = 0;
+    CHECK(t0 < t1);
+    CHECK(global_time_mock == 1);
+    global_time_mock = 0;
+    CHECK_FALSE(t0 > t1);
+    CHECK(global_time_mock == 2);
+
+    tuples::tagged_tuple<
+        relational_tags::LexTimeComp0, relational_tags::LexTimeComp1,
+        relational_tags::LexTimeComp2, relational_tags::LexTimeComp3,
+        relational_tags::LexTimeComp4, relational_tags::LexTimeComp5,
+        relational_tags::LexTimeComp6, relational_tags::LexTimeComp7,
+        relational_tags::LexTimeComp8, relational_tags::LexTimeComp9,
+        relational_tags::LexTimeComp10, relational_tags::LexTimeComp11,
+        relational_tags::LexTimeComp12, relational_tags::LexTimeComp13>
+        t2{'a', 'a', 'a', 'a', 'a', 'a', 'a',
+           'a', 'a', 'a', 'a', 'a', 'a', 'a'};
+    global_time_mock = 0;
+    CHECK(t0 <= t2);
+    CHECK(global_time_mock == 28);
+  }
+#if __cplusplus >= 201402L
+  {
+    // Check constexpr lexicographical comparison
+    constexpr tuples::tagged_tuple<
+        relational_tags::Char0, relational_tags::Char1, relational_tags::Char2>
+        t0{'a', 'a', 'c'};
+    constexpr tuples::tagged_tuple<
+        relational_tags::Char0, relational_tags::Char1, relational_tags::Char2>
+        t1{'a', 'a', 'd'};
+    constexpr tuples::tagged_tuple<
+        relational_tags::Char0, relational_tags::Char1, relational_tags::Char2>
+        t2{'a', 'a', 'c'};
+    constexpr tuples::tagged_tuple<
+        relational_tags::Char0, relational_tags::Char1, relational_tags::Char2>
+        t3{'a', 'a', 'b'};
+    static_assert(t0 < t1, "Failed testing relational operators");
+    static_assert(t0 <= t1, "Failed testing relational operators");
+    static_assert(t0 <= t2, "Failed testing relational operators");
+
+    static_assert(t0 > t3, "Failed testing relational operators");
+    static_assert(t0 >= t2, "Failed testing relational operators");
+    static_assert(t0 >= t3, "Failed testing relational operators");
   }
 #endif
 }

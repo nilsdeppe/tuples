@@ -535,4 +535,74 @@ TUPLES_LIB_CONSTEXPR_CXX_14 bool operator!=(
     tagged_tuple<RTags...> const& rhs) noexcept(noexcept(lhs == rhs)) {
   return not(lhs == rhs);
 }
+
+namespace tuples_detail {
+struct less {
+  template <class T, class U>
+  static TUPLES_LIB_CONSTEXPR_CXX_14 void apply(
+      T const& lhs, U const& rhs, bool& last_rhs_less_lhs,
+      bool& result) noexcept(noexcept(lhs < rhs) and noexcept(rhs < lhs)) {
+    if (result or last_rhs_less_lhs) {
+      return;
+    }
+    result = lhs < rhs;
+    if (result) {
+      return;
+    }
+    last_rhs_less_lhs = rhs < lhs;
+  }
+};
+
+template <class... LTags, class... RTags>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool tuple_less_impl(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(std::initializer_list<bool>{
+    (get<LTags>(lhs) < get<RTags>(rhs))...})) {
+  bool result = false;
+  bool last_rhs_less_lhs = false;
+  static_cast<void>(std::initializer_list<char>{
+      (less::apply(get<LTags>(lhs), get<RTags>(rhs), last_rhs_less_lhs, result),
+       '0')...});
+  return result;
+}
+}  // namespace tuples_detail
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator<(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(tuples_detail::tuple_less_impl(lhs, rhs))) {
+  return tuples_detail::tuple_less_impl(lhs, rhs);
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator>(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(rhs < lhs)) {
+  return rhs < lhs;
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator<=(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(rhs < lhs)) {
+  return not(rhs < lhs);
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator>=(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(lhs < rhs)) {
+  return not(lhs < rhs);
+}
+
 }  // namespace tuples
