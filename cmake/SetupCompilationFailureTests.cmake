@@ -28,11 +28,69 @@ function(add_compilation_tests TEST_TARGET)
     endforeach ()
 endfunction()
 
+macro(parse_compilation_test_string)
+  string(REGEX REPLACE "TAGS: ([a-z0-9_ ]+) (.*)" "\\1"
+    TEST_TAGS "${OUTPUT_REGEX}")
+
+  string(REGEX REPLACE "TAGS: ${TEST_TAGS} VERSION: ([0-9]+.[0-9]+.[0-9]+) (.*)"
+    "\\1" COMPILER_VERSION "${OUTPUT_REGEX}")
+
+  string(REGEX REPLACE
+    "TAGS: ${TEST_TAGS} VERSION: ${COMPILER_VERSION} REGEX: (.*)" "\\1"
+    OUTPUT_REGEX "${OUTPUT_REGEX}")
+
+  string(FIND "${OUTPUT_REGEX}" "TAGS: " NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX)
+  if (NOT -1 EQUAL ${NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX})
+    string(SUBSTRING "${OUTPUT_REGEX}" ${NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX} -1
+      NEXT_FULL_REGEX)
+    string(FIND "${OUTPUT_REGEX}" " TAGS: " NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX)
+    string(SUBSTRING "${OUTPUT_REGEX}" 0 ${NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX}
+      OUTPUT_REGEX)
+    
+    while(NOT "${NEXT_FULL_REGEX}" STREQUAL "${OUTPUT_REGEX}")
+      string(REGEX REPLACE "TAGS: ([a-z0-9_ ]+) VERSION: (.*)" "\\1"
+        NEXT_TEST_TAGS "${NEXT_FULL_REGEX}")
+      
+      string(REGEX REPLACE
+        "TAGS: ${NEXT_TEST_TAGS} VERSION: ([0-9]+.[0-9]+.[0-9]+) REGEX: (.*)"
+        "\\1" NEXT_COMPILER_VERSION "${NEXT_FULL_REGEX}")
+      
+      string(REGEX REPLACE
+        "TAGS: ${NEXT_TEST_TAGS} VERSION: ${NEXT_COMPILER_VERSION} REGEX: (.*)"
+        "\\1" NEXT_FULL_REGEX "${NEXT_FULL_REGEX}")
+      
+      string(FIND "${NEXT_FULL_REGEX}" " TAGS: "
+        NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX)
+      string(SUBSTRING "${NEXT_FULL_REGEX}" 0
+        ${NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX} NEXT_OUTPUT_REGEX)
+      
+      if (${NEXT_COMPILER_VERSION} VERSION_GREATER
+          ${CMAKE_CXX_COMPILER_VERSION})
+        break()
+      endif()
+
+      set(TEST_TAGS "${NEXT_TEST_TAGS}")
+      set(COMPILER_VERSION "${NEXT_COMPILER_VERSION}")
+      set(OUTPUT_REGEX "${NEXT_OUTPUT_REGEX}")
+
+      string(FIND "${NEXT_FULL_REGEX}" "TAGS: "
+        NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX)
+      # If we cannot find "TAGS" anymore then we break
+      if (-1 EQUAL ${NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX})
+        break()
+      endif()
+      string(SUBSTRING "${NEXT_FULL_REGEX}"
+        ${NEXT_TAGS_LOCATION_IN_OUTPUT_REGEX} -1
+        NEXT_FULL_REGEX)
+    endwhile()
+  endif()
+endmacro()
+
 
 function(compilation_tests_parse_file SOURCE_FILE TEST_TARGET)
   if(NOT EXISTS ${SOURCE_FILE})
-    message(WARNING "Could not find source file:\n\"${SOURCE_FILE}\"\nfor \
-        tests\n.")
+    message(WARNING
+      "Could not find source file:\n\"${SOURCE_FILE}\"\nfor tests\n.")
     return()
   endif()
 
@@ -47,25 +105,21 @@ function(compilation_tests_parse_file SOURCE_FILE TEST_TARGET)
       TEST_NAME "${IFDEF_TEST_NAME}")
     
     if(EXISTS "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}")
-      FILE(READ "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}" OUTPUT_REGEX)
-      FILE(REMOVE "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}")
+      FILE(READ "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}"
+        OUTPUT_REGEX)
+      FILE(REMOVE
+        "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.${CMAKE_CXX_COMPILER_ID}")
 
-      string(REGEX REPLACE "Tags: ([a-z0-9_ ]+) (.*)" "\\1"
-        TEST_TAGS "${OUTPUT_REGEX}")
+      parse_compilation_test_string()
 
-      string(REGEX REPLACE "Tags: ${TEST_TAGS} ([0-9]+.[0-9]+): (.*)" "\\1"
-        COMPILER_VERSION "${OUTPUT_REGEX}")
-
-      string(REGEX REPLACE "Tags: ${TEST_TAGS} ${COMPILER_VERSION}: (.*)" "\\1"
-        OUTPUT_REGEX "${OUTPUT_REGEX}")
     elseif(EXISTS "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.all")
       FILE(READ "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.all" OUTPUT_REGEX)
       FILE(REMOVE "${CMAKE_BINARY_DIR}/tmp/${TEST_NAME}.all")
       
-      string(REGEX REPLACE "Tags: ([a-z0-9 ]+) Regex:(.*)" "\\1"
+      string(REGEX REPLACE "TAGS: ([a-z0-9 ]+) REGEX:(.*)" "\\1"
         TEST_TAGS "${OUTPUT_REGEX}")
 
-      string(REGEX REPLACE "Tags: ${TEST_TAGS} Regex: (.*)" "\\1"
+      string(REGEX REPLACE "TAGS: ${TEST_TAGS} REGEX: (.*)" "\\1"
         OUTPUT_REGEX "${OUTPUT_REGEX}")
     else()
       message(FATAL_ERROR "Could not find a regex to match for test: ${TEST_NAME}")

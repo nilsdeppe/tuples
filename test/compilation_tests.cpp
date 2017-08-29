@@ -23,6 +23,9 @@ struct no_default {
 // ‘tuples::tagged_tuple<tags::Int>::tagged_tuple\(\)’]]
 // [[COMPILER: Clang REGEX: error: no matching constructor for initialization of
 // 'tuples::tagged_tuple<tags::Int>'.  tuples::tagged_tuple<tags::Int> dummy;]]
+// [[COMPILER: AppleClang REGEX: error: no matching constructor for
+// initialization of 'tuples::tagged_tuple<tags::Int>'.
+//  tuples::tagged_tuple<tags::Int> dummy;]]
 
 namespace tags {
 struct Int {
