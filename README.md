@@ -13,9 +13,11 @@ and tagged tuples with millions of elements are supported.
 
 ## Requirements:
 - C++11 compatible compiler
-- GCC 4.7 or newer
-- Clang 3.1 or newer
+- GCC 4.8 or newer (GCC 4.7 does not properly support parameter pack expansion)
+- Clang 3.5 or newer tested (3.1 and newer should work)
 - Intel C++ compiler 14 or newer
+- MSVC currently unknown
+- XCode v6.4 and newer tested
 
 ## Acknowledgements
 

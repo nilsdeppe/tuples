@@ -41,18 +41,18 @@ def parse_source_file(file_name):
             compilers = compiler_and_regex.group(1).strip().split(',')
             regex_to_find = compiler_and_regex.group(2).replace("\n//", '')
             if compilers[0] != "all":
-                for compiler in compilers:
-                    compiler_and_version = compiler.split(':')
-                    open("COMPILATION_TEST_%s.%s" %
+                for i in range(len(compilers)):
+                    compiler_and_version = compilers[i].split(':')
+                    open("COMPILATION_TEST_%s.%s"  %
                          (test_name, compiler_and_version[0]), "a").\
-                         write("Tags: %s %s: %s" %
+                         write((" TAGS: %s VERSION: %s REGEX: %s") %
                                (test_tags_string,
                                 compiler_and_version[1] if
-                                len(compiler_and_version) > 1 else "0.0",
+                                len(compiler_and_version) > 1 else "0.0.0",
                                 regex_to_find))
             else:
                 open("COMPILATION_TEST_%s.all" % test_name, "w").\
-                     write("Tags: %s Regex: %s" %
+                     write("TAGS: %s REGEX: %s" %
                            (test_tags_string, regex_to_find))
 
 if __name__ == '__main__':

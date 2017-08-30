@@ -10,15 +10,53 @@
 #include <utility>
 
 namespace tuples {
+
+#if __cplusplus >= 201402L
+#define TUPLES_LIB_CONSTEXPR_CXX_14 constexpr
+#else
+#define TUPLES_LIB_CONSTEXPR_CXX_14
+#endif
+
 namespace tuples_detail {
+
+template <class T>
+inline constexpr T&& forward(
+    typename std::remove_reference<T>::type& t) noexcept {
+  return static_cast<T&&>(t);
+}
+
+template <class T>
+inline constexpr T&& forward(
+    typename std::remove_reference<T>::type&& t) noexcept {
+  static_assert(!std::is_lvalue_reference<T>::value,
+                "cannot forward an rvalue as an lvalue");
+  return static_cast<T&&>(t);
+}
 
 template <class T, T...>
 struct value_list {};
 
+template <class...>
+struct typelist {};
+
 template <bool... Bs>
-struct all
-    : std::is_same<value_list<bool, Bs...>,
-                   value_list<bool, (static_cast<void>(Bs), true)...>>::type {};
+using all = typename std::is_same<
+    value_list<bool, Bs...>,
+    value_list<bool, (static_cast<void>(Bs), true)...>>::type;
+
+struct no_such_type {
+  no_such_type() = delete;
+  no_such_type(no_such_type const& /*unused*/) = delete;
+  no_such_type(no_such_type&& /*unused*/) = delete;
+  ~no_such_type() = delete;
+  no_such_type& operator=(no_such_type const& /*unused*/) = delete;
+  no_such_type operator=(no_such_type&& /*unused*/) = delete;
+};
+
+template <typename... Ts>
+constexpr char swallow(Ts&&...) noexcept {
+  return '0';
+}
 }  // namespace tuples_detail
 
 namespace tuples_detail {
@@ -65,15 +103,15 @@ class tagged_tuple_leaf {
                 std::is_constructible<value_type, T&&>::value>::type* = nullptr>
   constexpr explicit tagged_tuple_leaf(T&& t) noexcept(
       std::is_nothrow_constructible<value_type, T&&>::value)
-      : value_(std::forward<T>(t)) {
+      : value_(tuples_detail::forward<T>(t)) {
     static_assert(can_bind_reference<T>(),
                   "Cannot construct an lvalue reference with an rvalue");
   }
 
-  constexpr tagged_tuple_leaf(const tagged_tuple_leaf& /*rhs*/) = default;
+  constexpr tagged_tuple_leaf(tagged_tuple_leaf const& /*rhs*/) = default;
   constexpr tagged_tuple_leaf(tagged_tuple_leaf&& /*rhs*/) = default;
 
-#if __cplusplus <= 201402L
+#if __cplusplus < 201402L
   value_type& get() noexcept { return value_; }
 #else
   constexpr value_type& get() noexcept { return value_; }
@@ -97,15 +135,17 @@ class tagged_tuple_leaf<Tag, true> : private Tag::type {
                 std::is_constructible<value_type, T&&>::value>::type* = nullptr>
   constexpr explicit tagged_tuple_leaf(T&& t) noexcept(
       std::is_nothrow_constructible<value_type, T&&>::value)
-      : value_type(std::forward<T>(t)) {}
+      : value_type(tuples_detail::forward<T>(t)) {}
 
-  constexpr tagged_tuple_leaf(const tagged_tuple_leaf& /*rhs*/) = default;
+  constexpr tagged_tuple_leaf(tagged_tuple_leaf const& /*rhs*/) = default;
   constexpr tagged_tuple_leaf(tagged_tuple_leaf&& /*rhs*/) = default;
 
-#if __cplusplus <= 201402L
+#if __cplusplus < 201402L
   value_type& get() noexcept { return static_cast<value_type&>(*this); }
 #else
-  constexpr value_type& get() noexcept { return value_; }
+  constexpr value_type& get() noexcept {
+    return static_cast<value_type&>(*this);
+  }
 #endif
 
   constexpr const value_type& get() const noexcept {
@@ -134,11 +174,14 @@ constexpr const typename Tag::type&& get(
 template <class Tag, class... Tags>
 constexpr typename Tag::type&& get(tagged_tuple<Tags...>&& t) noexcept;
 
+/*!
+ * \brief Returns the type of the Tag
+ */
+template <class Tag>
+using tag_type = typename Tag::type;
+
 template <class... Tags>
 class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
-  template <class Tag>
-  using tag_type = typename Tag::type;
-
   template <class... Args>
   struct pack_is_tagged_tuple : std::false_type {};
   template <class Arg>
@@ -204,7 +247,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
               not tuples_detail::all<std::is_constructible<
                   tag_type<Tags>, Tuple>::value...>::value and
               not tuples_detail::all<
-                  std::is_same<tag_type<Ts>, Ts>::value...>::value);
+                  std::is_same<tag_type<Tags>, Ts>::value...>::value);
     }
 
     template <class Tuple, class... Ts>
@@ -216,9 +259,19 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
               not tuples_detail::all<std::is_constructible<
                   tag_type<Tags>, Tuple>::value...>::value and
               not tuples_detail::all<
-                  std::is_same<tag_type<Ts>, Ts>::value...>::value);
+                  std::is_same<tag_type<Tags>, Ts>::value...>::value);
     }
   };
+
+  // C++17 Draft 23.5.3.2 Assignment - helper aliases
+  using is_copy_assignable =
+      tuples_detail::all<std::is_copy_assignable<tag_type<Tags>>::value...>;
+  using is_nothrow_copy_assignable = tuples_detail::all<
+      std::is_nothrow_copy_assignable<tag_type<Tags>>::value...>;
+  using is_move_assignable =
+      tuples_detail::all<std::is_move_assignable<tag_type<Tags>>::value...>;
+  using is_nothrow_move_assignable = tuples_detail::all<
+      std::is_nothrow_move_assignable<tag_type<Tags>>::value...>;
 
   template <class Tag, class... LTags>
   friend constexpr const typename Tag::type& get(
@@ -233,6 +286,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
       tagged_tuple<LTags...>&& t) noexcept;
 
  public:
+  // C++17 Draft 23.5.3.1 Construction
   template <bool Dummy = true,
             typename std::enable_if<
                 args_constructor<Dummy>::enable_default()>::type* = nullptr>
@@ -240,7 +294,7 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
       tuples_detail::all<std::is_nothrow_default_constructible<
           tag_type<Tags>>::value...>::value) {}
 
-  constexpr tagged_tuple(const tagged_tuple& /*rhs*/) = default;
+  constexpr tagged_tuple(tagged_tuple const& /*rhs*/) = default;
   constexpr tagged_tuple(tagged_tuple&& /*rhs*/) = default;
 
   template <
@@ -269,7 +323,8 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   constexpr explicit tagged_tuple(Us&&... us) noexcept(
       tuples_detail::all<std::is_nothrow_constructible<
           tuples_detail::tagged_tuple_leaf<Tags>, Us&&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(std::forward<Us>(us))... {}
+      : tuples_detail::tagged_tuple_leaf<Tags>(
+            tuples_detail::forward<Us>(us))... {}
 
   template <class... Us,
             typename std::enable_if<
@@ -279,59 +334,116 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   constexpr tagged_tuple(Us&&... us) noexcept(
       tuples_detail::all<std::is_nothrow_constructible<
           tuples_detail::tagged_tuple_leaf<Tags>, Us&&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(std::forward<Us>(us))... {}
-
-  template <class... Us,
-            typename std::enable_if<tuple_like_constructor<
-                sizeof...(Tags) == sizeof...(Us) and
-                tuples_detail::all<std::is_constructible<tag_type<Tags>,
-                                                         const Us&>::value...>::
-                    value>::template enable_explicit<const tagged_tuple<Us...>&,
-                                                     Us...>()>::type* = nullptr>
-  constexpr explicit tagged_tuple(const tagged_tuple<Us...>& t) noexcept(
-      tuples_detail::all<std::is_nothrow_constructible<
-          tag_type<Tags>, const Us&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(get<Tags>(t))... {}
-
-  template <class... Us,
-            typename std::enable_if<tuple_like_constructor<
-                sizeof...(Tags) == sizeof...(Us) and
-                tuples_detail::all<std::is_constructible<tag_type<Tags>,
-                                                         const Us&>::value...>::
-                    value>::template enable_implicit<const tagged_tuple<Us...>&,
-                                                     Us...>()>::type* = nullptr>
-  constexpr tagged_tuple(const tagged_tuple<Us...>& t) noexcept(
-      tuples_detail::all<std::is_nothrow_constructible<
-          tag_type<Tags>, const Us&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(get<Tags>(t))... {}
+      : tuples_detail::tagged_tuple_leaf<Tags>(
+            tuples_detail::forward<Us>(us))... {}
 
   template <
-      class... Us,
+      class... UTags,
       typename std::enable_if<
-          tuple_like_constructor<sizeof...(Tags) == sizeof...(Us) and
-                                 tuples_detail::all<std::is_constructible<
-                                     tag_type<Tags>, Us&&>::value...>::value>::
-              template enable_explicit<tagged_tuple<Us...>&&, Us...>()>::type* =
-          nullptr>
-  constexpr explicit tagged_tuple(tagged_tuple<Us...>&& t) noexcept(
-      tuples_detail::all<
-          std::is_nothrow_constructible<tag_type<Tags>, Us&&>::value...>::value)
-      : tuples_detail::tagged_tuple_leaf<Tags>(
-            std::forward<Us>(get<Tags>(t)))... {}
+          tuple_like_constructor<
+              sizeof...(Tags) == sizeof...(UTags) and
+              tuples_detail::all<std::is_constructible<
+                  tag_type<Tags>, tag_type<UTags> const&>::value...>::value>::
+              template enable_explicit<tagged_tuple<UTags...> const&,
+                                       tag_type<UTags>...>()>::type* = nullptr>
+  constexpr explicit tagged_tuple(tagged_tuple<UTags...> const& t) noexcept(
+      tuples_detail::all<std::is_nothrow_constructible<
+          tag_type<Tags>, tag_type<UTags> const&>::value...>::value)
+      : tuples_detail::tagged_tuple_leaf<Tags>(get<UTags>(t))... {}
 
   template <
-      class... Us,
+      class... UTags,
       typename std::enable_if<
-          tuple_like_constructor<sizeof...(Tags) == sizeof...(Us) and
-                                 tuples_detail::all<std::is_constructible<
-                                     tag_type<Tags>, Us&&>::value...>::value>::
-              template enable_implicit<tagged_tuple<Us...>&&, Us...>()>::type* =
-          nullptr>
-  constexpr tagged_tuple(tagged_tuple<Us...>&& t) noexcept(
-      tuples_detail::all<
-          std::is_nothrow_constructible<tag_type<Tags>, Us&&>::value...>::value)
+          tuple_like_constructor<
+              sizeof...(Tags) == sizeof...(UTags) and
+              tuples_detail::all<std::is_constructible<
+                  tag_type<Tags>, tag_type<UTags> const&>::value...>::value>::
+              template enable_implicit<tagged_tuple<UTags...> const&,
+                                       tag_type<UTags>...>()>::type* = nullptr>
+  constexpr tagged_tuple(tagged_tuple<UTags...> const& t) noexcept(
+      tuples_detail::all<std::is_nothrow_constructible<
+          tag_type<Tags>, tag_type<UTags> const&>::value...>::value)
+      : tuples_detail::tagged_tuple_leaf<Tags>(get<UTags>(t))... {}
+
+  template <
+      class... UTags,
+      typename std::enable_if<
+          tuple_like_constructor<
+              sizeof...(Tags) == sizeof...(UTags) and
+              tuples_detail::all<std::is_constructible<
+                  tag_type<Tags>, tag_type<UTags>&&>::value...>::value>::
+              template enable_explicit<tagged_tuple<UTags...>&&,
+                                       tag_type<UTags>...>()>::type* = nullptr>
+  constexpr explicit tagged_tuple(tagged_tuple<UTags...>&& t) noexcept(
+      tuples_detail::all<std::is_nothrow_constructible<
+          tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
       : tuples_detail::tagged_tuple_leaf<Tags>(
-            std::forward<Us>(get<Tags>(t)))... {}
+            tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))... {}
+
+  template <
+      class... UTags,
+      typename std::enable_if<
+          tuple_like_constructor<
+              sizeof...(Tags) == sizeof...(UTags) and
+              tuples_detail::all<std::is_constructible<
+                  tag_type<Tags>, tag_type<UTags>&&>::value...>::value>::
+              template enable_implicit<tagged_tuple<UTags...>&&,
+                                       tag_type<UTags>...>()>::type* = nullptr>
+  constexpr tagged_tuple(tagged_tuple<UTags...>&& t) noexcept(
+      tuples_detail::all<std::is_nothrow_constructible<
+          tag_type<Tags>, tag_type<UTags>&&>::value...>::value)
+      : tuples_detail::tagged_tuple_leaf<Tags>(
+            tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))... {}
+
+  // C++17 Draft 23.5.3.2 Assignment
+  tagged_tuple& operator=(
+      typename std::conditional<is_copy_assignable::value, tagged_tuple,
+                                tuples_detail::no_such_type>::type const&
+          t) noexcept(is_nothrow_copy_assignable::value) {
+    static_cast<void>(
+        tuples_detail::swallow((get<Tags>(*this) = get<Tags>(t))...));
+    return *this;
+  }
+
+  tagged_tuple& operator=(
+      typename std::conditional<is_move_assignable::value, tagged_tuple,
+                                tuples_detail::no_such_type>::type&&
+          t) noexcept(is_nothrow_move_assignable::value) {
+    static_cast<void>(tuples_detail::swallow(
+        (get<Tags>(*this) =
+             tuples_detail::forward<tag_type<Tags>>(get<Tags>(t)))...));
+    return *this;
+  }
+
+  template <class... UTags,
+            typename std::enable_if<
+                sizeof...(Tags) == sizeof...(UTags) and
+                tuples_detail::all<std::is_assignable<
+                    tag_type<Tags>&,
+                    tag_type<UTags> const&>::value...>::value>::type* = nullptr>
+  tagged_tuple& operator=(tagged_tuple<UTags...> const& t) noexcept(
+      tuples_detail::all<std::is_nothrow_assignable<
+          tag_type<Tags>&, tag_type<UTags> const&>::value...>::value) {
+    static_cast<void>(
+        tuples_detail::swallow((get<Tags>(*this) = get<UTags>(t))...));
+    return *this;
+  }
+
+  template <
+      class... UTags,
+      typename std::enable_if<
+          sizeof...(Tags) == sizeof...(UTags) and
+          tuples_detail::all<std::is_assignable<
+              tag_type<Tags>&, tag_type<UTags>&&>::value...>::value>::type* =
+          nullptr>
+  tagged_tuple& operator=(tagged_tuple<UTags...>&& t) noexcept(
+      tuples_detail::all<std::is_nothrow_assignable<
+          tag_type<Tags>&, tag_type<UTags>&&>::value...>::value) {
+    static_cast<void>(tuples_detail::swallow(
+        (get<Tags>(*this) =
+             tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))...));
+    return *this;
+  }
 };
 
 template <>
@@ -341,7 +453,24 @@ class tagged_tuple<> {
   void swap(tagged_tuple& /*unused*/) noexcept {}
 };
 
-// get implementations
+// C++17 Draft 23.5.3.6 Tuple helper classes
+template <class T>
+struct tuple_size;
+
+template <class... Tags>
+struct tuple_size<tagged_tuple<Tags...>>
+    : std::integral_constant<size_t, sizeof...(Tags)> {};
+template <class... Tags>
+struct tuple_size<const tagged_tuple<Tags...>>
+    : tuple_size<tagged_tuple<Tags...>> {};
+template <class... Tags>
+struct tuple_size<volatile tagged_tuple<Tags...>>
+    : tuple_size<tagged_tuple<Tags...>> {};
+template <class... Tags>
+struct tuple_size<const volatile tagged_tuple<Tags...>>
+    : tuple_size<tagged_tuple<Tags...>> {};
+
+// C++17 Draft 23.5.3.7 Element access
 template <class Tag, class... Tags>
 inline constexpr const typename Tag::type& get(
     const tagged_tuple<Tags...>& t) noexcept {
@@ -362,4 +491,118 @@ inline constexpr typename Tag::type&& get(tagged_tuple<Tags...>&& t) noexcept {
   return static_cast<typename Tag::type&&>(
       static_cast<tuples_detail::tagged_tuple_leaf<Tag>&&>(t).get());
 }
+
+// C++17 Draft 23.5.3.8 Relational operators
+namespace tuples_detail {
+struct equal {
+  template <class T, class U>
+  static TUPLES_LIB_CONSTEXPR_CXX_14 void apply(
+      T const& lhs, U const& rhs, bool& result) noexcept(noexcept(lhs == rhs)) {
+    result = result and lhs == rhs;
+  }
+};
+
+template <class... LTags, class... RTags>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool tuple_equal_impl(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(std::initializer_list<bool>{
+    (get<LTags>(lhs) == get<RTags>(rhs))...})) {
+  bool equal = true;
+  // This short circuits in the sense that the operator== is only evaluated if
+  // the result thus far is true
+  static_cast<void>(std::initializer_list<char>{
+      (equal::apply(get<LTags>(lhs), get<RTags>(rhs), equal), '0')...});
+  return equal;
+}
+}  // namespace tuples_detail
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator==(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(tuples_detail::tuple_equal_impl(lhs, rhs))) {
+  return tuples_detail::tuple_equal_impl(lhs, rhs);
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator!=(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(lhs == rhs)) {
+  return not(lhs == rhs);
+}
+
+namespace tuples_detail {
+struct less {
+  template <class T, class U>
+  static TUPLES_LIB_CONSTEXPR_CXX_14 void apply(
+      T const& lhs, U const& rhs, bool& last_rhs_less_lhs,
+      bool& result) noexcept(noexcept(lhs < rhs) and noexcept(rhs < lhs)) {
+    if (result or last_rhs_less_lhs) {
+      return;
+    }
+    result = lhs < rhs;
+    if (result) {
+      return;
+    }
+    last_rhs_less_lhs = rhs < lhs;
+  }
+};
+
+template <class... LTags, class... RTags>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool tuple_less_impl(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(std::initializer_list<bool>{
+    (get<LTags>(lhs) < get<RTags>(rhs))...})) {
+  bool result = false;
+  bool last_rhs_less_lhs = false;
+  static_cast<void>(std::initializer_list<char>{
+      (less::apply(get<LTags>(lhs), get<RTags>(rhs), last_rhs_less_lhs, result),
+       '0')...});
+  return result;
+}
+}  // namespace tuples_detail
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator<(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const&
+        rhs) noexcept(noexcept(tuples_detail::tuple_less_impl(lhs, rhs))) {
+  return tuples_detail::tuple_less_impl(lhs, rhs);
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator>(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(rhs < lhs)) {
+  return rhs < lhs;
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator<=(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(rhs < lhs)) {
+  return not(rhs < lhs);
+}
+
+template <class... LTags, class... RTags,
+          typename std::enable_if<sizeof...(LTags) == sizeof...(RTags)>::type* =
+              nullptr>
+TUPLES_LIB_CONSTEXPR_CXX_14 bool operator>=(
+    tagged_tuple<LTags...> const& lhs,
+    tagged_tuple<RTags...> const& rhs) noexcept(noexcept(lhs < rhs)) {
+  return not(lhs < rhs);
+}
+
 }  // namespace tuples
