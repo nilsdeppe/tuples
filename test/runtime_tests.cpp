@@ -443,7 +443,7 @@ struct lex_time_compared {
 };
 
 bool operator<(lex_time_compared const& lhs,
-                         lex_time_compared const& rhs) noexcept {
+               lex_time_compared const& rhs) noexcept {
   global_time_mock++;
   return lhs.c_ < rhs.c_;
 }
@@ -620,4 +620,197 @@ TEST_CASE("Unit.tagged_tuple.helper_classes", "[unit][runtime][tagged_tuple]") {
       tuples::tuple_size<const volatile tuples::tagged_tuple<>>::value == 0,
       "Failed check tuple_size");
 }
+
+// C++17 Draft 23.5.3.3 swap
+struct not_swappable {
+  not_swappable(int v) : v_(v) {}
+  int v_;
+};
+
+struct throws_swap {
+  throws_swap() = default;
+  throws_swap(int v) : v_(v) {}
+
+  int v_{0};
+};
+
+void swap(throws_swap& lhs, throws_swap& rhs) noexcept(false) {
+  using std::swap;
+  using tuples::swap;
+  swap(lhs.v_, rhs.v_);
+}
+
+static int global_swappable_value = 0;
+
+struct empty_base_swappable {};
+
+void swap(empty_base_swappable& /*lhs*/,
+          empty_base_swappable& /*rhs*/) noexcept {
+  global_swappable_value++;
+}
+
+struct empty_base_throws_swappable {};
+
+void swap(empty_base_throws_swappable& /*lhs*/,
+          empty_base_throws_swappable& /*rhs*/) noexcept(false) {
+  global_swappable_value++;
+}
+
+static_assert(tuples::tuples_detail::is_swappable_with<double, double>::value,
+              "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(tuples::tuples_detail::is_swappable_with<double&, double>::value,
+              "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(tuples::tuples_detail::is_swappable_with<double&, double&>::value,
+              "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_swappable_with<double const&, double>::value,
+    "Failed testing tuples::tuples_detail::is_swappable_with");
+
+static_assert(
+    tuples::tuples_detail::is_nothrow_swappable_with<double, double>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    tuples::tuples_detail::is_nothrow_swappable_with<double&, double>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    tuples::tuples_detail::is_nothrow_swappable_with<double&, double&>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<double const&,
+                                                         double>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+
+static_assert(
+    not tuples::tuples_detail::is_swappable_with<double, not_swappable>::value,
+    "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_swappable_with<double&, not_swappable>::value,
+    "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_swappable_with<double, not_swappable&>::value,
+    "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(not tuples::tuples_detail::is_swappable_with<
+                  double&, not_swappable&>::value,
+              "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(not tuples::tuples_detail::is_swappable_with<
+                  double const&, not_swappable>::value,
+              "Failed testing tuples::tuples_detail::is_swappable_with");
+
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<double,
+                                                         not_swappable>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<double&,
+                                                         not_swappable>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<double,
+                                                         not_swappable&>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<double&,
+                                                         not_swappable&>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<double const&,
+                                                         not_swappable>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+
+static_assert(
+    tuples::tuples_detail::is_swappable_with<throws_swap, throws_swap>::value,
+    "Failed testing tuples::tuples_detail::is_swappable_with");
+static_assert(
+    not tuples::tuples_detail::is_nothrow_swappable_with<throws_swap,
+                                                         throws_swap>::value,
+    "Failed testing tuples::tuples_detail::is_nothrow_swappable_with");
+
+namespace swap_tags {
+struct Int0 {
+  using type = int;
+};
+struct Int1 {
+  using type = int;
+};
+struct NotSwappable {
+  using type = not_swappable;
+};
+
+struct ThrowsSwap {
+  using type = throws_swap;
+};
+
+struct EmptyBaseSwap0 {
+  using type = empty_base_swappable;
+};
+struct EmptyBaseSwap1 {
+  using type = empty_base_swappable;
+};
+
+struct EmptyBaseThrowsSwap0 {
+  using type = empty_base_throws_swappable;
+};
+struct EmptyBaseThrowsSwap1 {
+  using type = empty_base_throws_swappable;
+};
+}  // namespace swap_tags
+
+TEST_CASE("Unit.tagged_tuple.swap", "[unit][runtime][tagged_tuple]") {
+  {
+    tuples::tagged_tuple<> t0{};
+    tuples::tagged_tuple<> t1{};
+    tuples::swap(t0, t1);
+  }
+  {
+    tuples::tagged_tuple<swap_tags::Int0, swap_tags::Int1> t0{1, 3};
+    tuples::tagged_tuple<swap_tags::Int0, swap_tags::Int1> t1{4, 5};
+    CHECK(tuples::get<swap_tags::Int0>(t0) == 1);
+    CHECK(tuples::get<swap_tags::Int1>(t0) == 3);
+    CHECK(tuples::get<swap_tags::Int0>(t1) == 4);
+    CHECK(tuples::get<swap_tags::Int1>(t1) == 5);
+    tuples::swap(t0, t1);
+    CHECK(tuples::get<swap_tags::Int0>(t1) == 1);
+    CHECK(tuples::get<swap_tags::Int1>(t1) == 3);
+    CHECK(tuples::get<swap_tags::Int0>(t0) == 4);
+    CHECK(tuples::get<swap_tags::Int1>(t0) == 5);
+    static_assert(noexcept(tuples::swap(t0, t1)),
+                  "Failed testing Unit.tagged_tuple.swap");
+  }
+  {
+    tuples::tagged_tuple<swap_tags::ThrowsSwap> t0{1};
+    tuples::tagged_tuple<swap_tags::ThrowsSwap> t1{2};
+    CHECK(tuples::get<swap_tags::ThrowsSwap>(t0).v_ == 1);
+    CHECK(tuples::get<swap_tags::ThrowsSwap>(t1).v_ == 2);
+    tuples::swap(t0, t1);
+    CHECK(tuples::get<swap_tags::ThrowsSwap>(t0).v_ == 2);
+    CHECK(tuples::get<swap_tags::ThrowsSwap>(t1).v_ == 1);
+    static_assert(not noexcept(tuples::swap(t0, t1)),
+                  "Failed testing Unit.tagged_tuple.swap");
+  }
+  {
+    tuples::tagged_tuple<swap_tags::EmptyBaseSwap0, swap_tags::EmptyBaseSwap1>
+        t0;
+    tuples::tagged_tuple<swap_tags::EmptyBaseSwap0, swap_tags::EmptyBaseSwap1>
+        t1;
+    global_swappable_value = 0;
+    tuples::swap(t0, t1);
+    CHECK(global_swappable_value == 2);
+    static_assert(noexcept(tuples::swap(t0, t1)),
+                  "Failed testing Unit.tagged_tuple.swap");
+  }
+  {
+    tuples::tagged_tuple<swap_tags::EmptyBaseThrowsSwap0,
+                         swap_tags::EmptyBaseThrowsSwap1>
+        t0;
+    tuples::tagged_tuple<swap_tags::EmptyBaseThrowsSwap0,
+                         swap_tags::EmptyBaseThrowsSwap1>
+        t1;
+    global_swappable_value = 0;
+    tuples::swap(t0, t1);
+    CHECK(global_swappable_value == 2);
+    static_assert(not noexcept(tuples::swap(t0, t1)),
+                  "Failed testing Unit.tagged_tuple.swap");
+  }
+}
+
 }  // namespace

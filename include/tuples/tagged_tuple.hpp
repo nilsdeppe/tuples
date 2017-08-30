@@ -53,6 +53,48 @@ struct no_such_type {
   no_such_type operator=(no_such_type&& /*unused*/) = delete;
 };
 
+namespace detail {
+using std::swap;
+
+template <class T, class S,
+          bool = not std::is_void<T>::value and not std::is_void<S>::value>
+struct is_swappable_with {
+  template <class L, class R>
+  static auto test_swap(int)
+      -> decltype(swap(std::declval<L&>(), std::declval<R&>()));
+  template <class L, class R>
+  static tuples::tuples_detail::no_such_type test_swap(...);
+
+  static const bool value =
+      not std::is_same<decltype(test_swap<T, S>(0)),
+                       tuples::tuples_detail::no_such_type>::value and
+      not std::is_same<decltype(test_swap<S, T>(0)),
+                       tuples::tuples_detail::no_such_type>::value;
+};
+
+template <class T, class S>
+struct is_swappable_with<T, S, false> : std::false_type {};
+}  // namespace detail
+
+template <class T, class S>
+using is_swappable_with = detail::is_swappable_with<T, S>;
+
+template <class T, class S, bool = is_swappable_with<T, S>::value>
+struct is_nothrow_swappable_with {
+ private:
+  static constexpr bool check() {
+    using std::swap;
+    return noexcept(swap(std::declval<T&>(), std::declval<S&>())) and
+           noexcept(swap(std::declval<S&>(), std::declval<T&>()));
+  }
+
+ public:
+  static const bool value = check();
+};
+
+template <class T, class S>
+struct is_nothrow_swappable_with<T, S, false> : std::false_type {};
+
 template <typename... Ts>
 constexpr char swallow(Ts&&...) noexcept {
   return '0';
@@ -63,7 +105,17 @@ namespace tuples_detail {
 template <class Tag,
           bool Ebo = std::is_empty<typename Tag::type>::value &&
                      !__is_final(typename Tag::type)>
-class tagged_tuple_leaf {
+class tagged_tuple_leaf;
+
+template <class T, bool B>
+void swap(tagged_tuple_leaf<T, B>& lhs, tagged_tuple_leaf<T, B>& rhs) noexcept(
+    is_nothrow_swappable_with<typename T::type, typename T::type>::value) {
+  using std::swap;
+  swap(lhs.get(), rhs.get());
+}
+
+template <class Tag>
+class tagged_tuple_leaf<Tag, false> {
   using value_type = typename Tag::type;
   value_type value_;
 
@@ -117,6 +169,13 @@ class tagged_tuple_leaf {
   constexpr value_type& get() noexcept { return value_; }
 #endif
   constexpr const value_type& get() const noexcept { return value_; }
+
+  bool swap(tagged_tuple_leaf& t) noexcept(
+      is_nothrow_swappable_with<tagged_tuple_leaf, tagged_tuple_leaf>::value) {
+    using std::swap;
+    swap(*this, t);
+    return false;
+  }
 };
 
 template <class Tag>
@@ -150,6 +209,13 @@ class tagged_tuple_leaf<Tag, true> : private Tag::type {
 
   constexpr const value_type& get() const noexcept {
     return static_cast<const value_type&>(*this);
+  }
+
+  bool swap(tagged_tuple_leaf& t) noexcept(
+      is_nothrow_swappable_with<tagged_tuple_leaf, tagged_tuple_leaf>::value) {
+    using std::swap;
+    swap(*this, t);
+    return false;
   }
 };
 
@@ -444,6 +510,15 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
              tuples_detail::forward<tag_type<UTags>>(get<UTags>(t)))...));
     return *this;
   }
+
+  // C++17 Draft 23.5.3.3 swap
+  void swap(tagged_tuple& t) noexcept(
+      tuples_detail::all<tuples_detail::is_nothrow_swappable_with<
+          tuples_detail::tagged_tuple_leaf<Tags>,
+          tuples_detail::tagged_tuple_leaf<Tags>>::value...>::value) {
+    tuples_detail::swallow(tuples_detail::tagged_tuple_leaf<Tags>::swap(
+        static_cast<tuples_detail::tagged_tuple_leaf<Tags>&>(t))...);
+  }
 };
 
 template <>
@@ -603,6 +678,20 @@ TUPLES_LIB_CONSTEXPR_CXX_14 bool operator>=(
     tagged_tuple<LTags...> const& lhs,
     tagged_tuple<RTags...> const& rhs) noexcept(noexcept(lhs < rhs)) {
   return not(lhs < rhs);
+}
+
+// C++17 Draft 23.5.3.3 swap
+template <
+    class... Tags,
+    typename std::enable_if<tuples_detail::all<tuples_detail::is_swappable_with<
+        tuples_detail::tagged_tuple_leaf<Tags>,
+        tuples_detail::tagged_tuple_leaf<Tags>>::value...>::value>::type* =
+        nullptr>
+void swap(tagged_tuple<Tags...>& lhs, tagged_tuple<Tags...>& rhs) noexcept(
+    tuples_detail::all<tuples_detail::is_nothrow_swappable_with<
+        tuples_detail::tagged_tuple_leaf<Tags>,
+        tuples_detail::tagged_tuple_leaf<Tags>>::value...>::value) {
+  lhs.swap(rhs);
 }
 
 }  // namespace tuples
