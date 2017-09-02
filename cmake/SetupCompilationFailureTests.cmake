@@ -19,7 +19,7 @@ function(add_compilation_tests TEST_TARGET)
     execute_process(
         COMMAND
         ${PYTHON_EXECUTABLE}
-        ${CMAKE_SOURCE_DIR}/cmake/ParseCompilationTests.py
+        ${CMAKE_SOURCE_DIR}/cmake/CompilationTestsParse.py
         ${ABSOLUTE_SOURCE_FILES}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/tmp)
 
