@@ -128,14 +128,10 @@ function(compilation_tests_parse_file SOURCE_FILE TEST_TARGET)
 
     add_test(
         NAME "${TEST_NAME}"
-        COMMAND make WHICH_TEST="-D${TEST_NAME}" ${TEST_TARGET}
+        COMMAND ${PYTHON_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/cmake/CompilationTestsExecute.py
+        --command "make WHICH_TEST=\\\"-D${TEST_NAME}\\\" ${TEST_TARGET}"
+        --regex ${OUTPUT_REGEX}
         )
-    set_tests_properties(
-      "${TEST_NAME}"
-      PROPERTIES
-      TIMEOUT 5
-      LABELS "${TEST_TAGS}"
-      PASS_REGULAR_EXPRESSION ${OUTPUT_REGEX}
-      )
   endforeach()
 endfunction()
