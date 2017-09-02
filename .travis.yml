@@ -10,7 +10,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.8']
+          packages: ['g++-4.8', 'language-pack-en']
       env: TOOLSET=g++-4.8 CXX_VERSION=11
 
     - os: linux
@@ -19,7 +19,7 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.8']
+          packages: ['g++-4.8', 'language-pack-en']
       env: TOOLSET=g++-4.8 CXX_VERSION=14
 
     # GCC 4.9
