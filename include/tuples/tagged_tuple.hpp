@@ -226,6 +226,18 @@ struct disable_constructors {
 };
 }  // namespace tuples_detail
 
+/*!
+ * \brief A compile time associative container between structs and data
+ *
+ * The template parameters to `tagged_tuple` are `struct`s with a member type
+ * alias, `type` denoting the type of the data to be associated with the tag.
+ * An example tag is:
+ * \snippet runtime_tests.cpp example_tag_simple
+ * A tagged_tuple is created by, for example
+ * \snippet runtime_tests.cpp example_simple_create
+ * Elements are retrieved using the `get` functions as follows:
+ * \snippet runtime_tests.cpp example_get_function
+ */
 template <class... Tags>
 class tagged_tuple;
 
@@ -241,7 +253,7 @@ template <class Tag, class... Tags>
 constexpr typename Tag::type&& get(tagged_tuple<Tags...>&& t) noexcept;
 
 /*!
- * \brief Returns the type of the Tag
+ * \brief Metafunction that returns the type of the Tag
  */
 template <class Tag>
 using tag_type = typename Tag::type;
@@ -521,17 +533,24 @@ class tagged_tuple : private tuples_detail::tagged_tuple_leaf<Tags>... {
   }
 };
 
+/// \cond
 template <>
 class tagged_tuple<> {
  public:
   tagged_tuple() noexcept {}
   void swap(tagged_tuple& /*unused*/) noexcept {}
 };
+/// \endcond
 
 // C++17 Draft 23.5.3.6 Tuple helper classes
+/*!
+ * \brief Has a member variable `value` equal to the number of elements in a
+ * tagged_tuple
+ */
 template <class T>
 struct tuple_size;
 
+/// \cond
 template <class... Tags>
 struct tuple_size<tagged_tuple<Tags...>>
     : std::integral_constant<size_t, sizeof...(Tags)> {};
@@ -544,8 +563,13 @@ struct tuple_size<volatile tagged_tuple<Tags...>>
 template <class... Tags>
 struct tuple_size<const volatile tagged_tuple<Tags...>>
     : tuple_size<tagged_tuple<Tags...>> {};
+/// \endcond
 
 // C++17 Draft 23.5.3.7 Element access
+// @{
+/*!
+ * \brief Retrieve the element with tag `Tag` from the tagged_tuple `t`
+ */
 template <class Tag, class... Tags>
 inline constexpr const typename Tag::type& get(
     const tagged_tuple<Tags...>& t) noexcept {
@@ -566,6 +590,7 @@ inline constexpr typename Tag::type&& get(tagged_tuple<Tags...>&& t) noexcept {
   return static_cast<typename Tag::type&&>(
       static_cast<tuples_detail::tagged_tuple_leaf<Tag>&&>(t).get());
 }
+// @}
 
 // C++17 Draft 23.5.3.8 Relational operators
 namespace tuples_detail {

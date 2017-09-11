@@ -34,4 +34,6 @@ include(SetupCxxVersion)
 include(SetupCompilationFailureTests)
 include(SetupCatchTests)
 
+include(SetupDoxygen)
+
 add_subdirectory(test)
