@@ -19,6 +19,11 @@ and tagged tuples with millions of elements are supported.
 - MSVC currently unknown
 - XCode v6.4 and newer tested
 
+## Doxygen Documentation
+
+The generated Doxygen documentation is automatically deployed to gh-pages
+[here](http://nilsdeppe.com/tuples/).
+
 ## Acknowledgements
 
 - libc++ for design inspiration of the tuple

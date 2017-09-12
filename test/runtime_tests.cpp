@@ -41,9 +41,11 @@ struct no_default2 {
 
 namespace tags {
 
+/// [example_tag_simple]
 struct Int {
   using type = int;
 };
+/// [example_tag_simple]
 struct Int1 {
   using type = int;
 };
@@ -159,9 +161,13 @@ struct non_copyable {
 TEST_CASE("Unit.tagged_tuple.construction", "[unit][runtime][tagged_tuple]") {
   {
     // Test copy and move constructors
+    /// [example_simple_create]
     tuples::tagged_tuple<tags::Int, tags::Short0> t0{2, 9};
+    /// [example_simple_create]
+    /// [example_get_function]
     CHECK(tuples::get<tags::Int>(t0) == 2);
     CHECK(tuples::get<tags::Short0>(t0) == 9);
+    /// [example_get_function]
     tuples::tagged_tuple<tags::Int, tags::Short0> t1(t0);
     CHECK(tuples::get<tags::Int>(t1) == 2);
     CHECK(tuples::get<tags::Short0>(t1) == 9);
