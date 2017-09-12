@@ -10,8 +10,8 @@ matrix:
       addons:
         apt:
           sources: ['ubuntu-toolchain-r-test']
-          packages: ['g++-4.8']
-      env: TOOLSET=g++-4.8 CXX_VERSION=11
+          packages: ['g++-4.8', 'doxygen', 'graphviz']
+      env: TOOLSET=g++-4.8 CXX_VERSION=11 GENERATE_DOXYGEN=yes
 
     - os: linux
       compiler: gcc
@@ -249,3 +249,20 @@ script:
   - cd ../build_release
   - make VERBOSE=1 run_tests
   - ctest --output-on-failure
+  - cd $TRAVIS_BUILD_DIR
+
+after_success:
+  - if [ $GENERATE_DOXYGEN = yes ]; then
+      cd $TRAVIS_BUILD_DIR/build_debug;
+      make doc;
+      cd $TRAVIS_BUILD_DIR;
+    fi
+
+deploy:
+  provider: pages
+  skip_cleanup: true
+  local_dir: build_debug/docs/html/  # or remove this line to upload from root of repo
+  github_token: $GITHUB_API_TOKEN # Set in travis-ci.org dashboard
+  on:
+    branch: master
+    condition: $GENERATE_DOXYGEN = yes
