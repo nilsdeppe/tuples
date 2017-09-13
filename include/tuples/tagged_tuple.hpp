@@ -39,6 +39,13 @@ struct value_list {};
 template <class...>
 struct typelist {};
 
+template <typename... Ts>
+struct make_void {
+  typedef void type;
+};
+template <typename... Ts>
+using void_t = typename make_void<Ts...>::type;
+
 template <bool... Bs>
 using all = typename std::is_same<
     value_list<bool, Bs...>,
