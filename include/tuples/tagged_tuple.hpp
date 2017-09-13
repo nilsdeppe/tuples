@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <ostream>
 #include <type_traits>
 #include <utility>
 
@@ -38,6 +39,13 @@ struct value_list {};
 
 template <class...>
 struct typelist {};
+
+template <typename... Ts>
+struct make_void {
+  typedef void type;
+};
+template <typename... Ts>
+using void_t = typename make_void<Ts...>::type;
 
 template <bool... Bs>
 using all = typename std::is_same<
@@ -717,6 +725,57 @@ void swap(tagged_tuple<Tags...>& lhs, tagged_tuple<Tags...>& rhs) noexcept(
         tuples_detail::tagged_tuple_leaf<Tags>,
         tuples_detail::tagged_tuple_leaf<Tags>>::value...>::value) {
   lhs.swap(rhs);
+}
+
+namespace tuples_detail {
+template <class S, class T, class = void_t<>>
+struct is_streamable : std::false_type {};
+template <class S, class T>
+struct is_streamable<
+    S, T,
+    void_t<decltype(std::declval<typename std::add_lvalue_reference<S>::type>()
+                    << std::declval<T>()),
+           typename std::enable_if<not std::is_same<S, T>::value>::type>>
+    : std::true_type {};
+
+template <class S, class T>
+using is_streamable_t = typename is_streamable<S, T>::type;
+
+struct stream_helper {
+  template <class T>
+  void operator()(std::ostream& os, const T& element, size_t& current_value,
+                  const size_t num_tags, const std::true_type /*meta*/) {
+    os << element;
+    current_value++;
+    if (current_value < num_tags) {
+      os << std::string(", ");
+    }
+  }
+
+  template <class T>
+  void operator()(std::ostream& os, const T& /*element*/, size_t& current_value,
+                  const size_t num_tags, const std::false_type /*meta*/) {
+    os << std::string("NOT STREAMABLE");
+    current_value++;
+    if (current_value < num_tags) {
+      os << std::string(", ");
+    }
+  }
+};
+}  // namespace tuples_detail
+
+template <class... Tags>
+std::ostream& operator<<(std::ostream& os, const tagged_tuple<Tags...>& t) {
+  os << std::string("(");
+  size_t current_value = 0;
+  tuples_detail::stream_helper helper;
+  // With empty tagged_tuple's helper is unused
+  static_cast<void>(helper);
+  static_cast<void>(std::initializer_list<char>{
+      (helper(os, get<Tags>(t), current_value, sizeof...(Tags),
+              tuples_detail::is_streamable_t<std::ostream, tag_type<Tags>>{}),
+       '0')...});
+  return os << std::string(")");
 }
 
 }  // namespace tuples

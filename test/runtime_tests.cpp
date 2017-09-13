@@ -819,4 +819,36 @@ TEST_CASE("Unit.tagged_tuple.swap", "[unit][runtime][tagged_tuple]") {
   }
 }
 
+namespace stream_tags {
+struct name {
+  using type = std::string;
+};
+
+struct age {
+  using type = int;
+};
+
+struct email {
+  using type = std::string;
+};
+
+struct not_streamable {
+  explicit not_streamable(int /*unused*/) {}
+  not_streamable() = default;
+};
+
+struct not_streamable_tag {
+  using type = not_streamable;
+};
+}  // namespace stream_tags
+
+TEST_CASE("Unit.tagged_tuple.stream_operator", "[unit][runtime][tagged_tuple]") {
+  tuples::tagged_tuple<stream_tags::name, stream_tags::age, stream_tags::email,
+                       stream_tags::not_streamable_tag>
+      test("bla", 17, "bla@bla.bla", 0);
+  std::stringstream ss;
+  ss << test;
+  CHECK(ss.str() == "(bla, 17, bla@bla.bla, NOT STREAMABLE)");
+}
+
 }  // namespace
