@@ -22,7 +22,7 @@ and tagged tuples with millions of elements are supported.
 ## Doxygen Documentation
 
 The generated Doxygen documentation is automatically deployed to gh-pages
-[here](http://nilsdeppe.com/tuples/).
+[here](https://nilsdeppe.github.io/tuples/).
 
 ## Acknowledgements
 
